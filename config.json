@@ -1,0 +1,19 @@
+{
+  "currency": "USD",
+  "reconciliation_tolerance": 0.01,
+  "required_position_columns": [
+    "position_id",
+    "account_id",
+    "security_id",
+    "quantity",
+    "price"
+  ],
+  "optional_position_columns": [
+    "as_of_date",
+    "currency",
+    "asset_class"
+  ],
+  "release_blocking_severities": [
+    "CRITICAL"
+  ]
+}

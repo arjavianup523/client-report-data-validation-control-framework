@@ -1,0 +1,173 @@
+
+from __future__ import annotations
+
+import argparse
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from src.exception_trends import (
+    get_exception_trends,
+    get_recurring_exceptions,
+    get_run_history,
+)
+from src.remediation_tracker import (
+    get_remediation_summary,
+    list_remediation_cases,
+    sync_remediation_cases,
+)
+from src.run_comparison import compare_runs, write_comparison_json
+
+
+def build_operational_review(
+    db_path: str | Path,
+    trend_limit: int = 30,
+    history_limit: int = 20,
+    recurring_minimum_runs: int = 2,
+) -> dict[str, Any]:
+    """Build a consolidated operational review from the audit database."""
+
+    database = Path(db_path)
+
+    if not database.is_file():
+        raise FileNotFoundError(
+            f"Audit database not found: {database.resolve()}"
+        )
+
+    # Register previously untracked control exceptions.
+    new_cases_registered = sync_remediation_cases(database)
+
+    # Retrieve the current operational picture.
+    run_history = get_run_history(database, limit=history_limit)
+    exception_trends = get_exception_trends(
+        database, limit=trend_limit
+    )
+    recurring_exceptions = get_recurring_exceptions(
+        database, minimum_runs=recurring_minimum_runs
+    )
+    remediation_summary = get_remediation_summary(database)
+    open_cases = list_remediation_cases(
+        database, status="Open", limit=100
+    )
+
+    # Compare the latest runs. Keep the rest of the review available
+    # even if there are not enough runs to compare.
+    comparison: dict[str, Any]
+
+    try:
+        comparison = {
+            "available": True,
+            "result": compare_runs(database),
+        }
+    except (ValueError, LookupError) as exc:
+        comparison = {
+            "available": False,
+            "reason": str(exc),
+        }
+
+    return {
+        "report_name": "Client Report Operational Control Review",
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "database": str(database),
+        "run_history": run_history,
+        "exception_trends": exception_trends,
+        "recurring_exceptions": recurring_exceptions,
+        "remediation": {
+            "new_cases_registered": new_cases_registered,
+            "summary": remediation_summary,
+            "open_cases": open_cases,
+        },
+        "run_comparison": comparison,
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Generate a consolidated operational control review."
+    )
+    parser.add_argument(
+        "--db-path",
+        default="data/control_audit.db",
+        help="Path to the control audit SQLite database.",
+    )
+    parser.add_argument(
+        "--output",
+        default="reports/operational_review.json",
+        help="Path for the consolidated JSON report.",
+    )
+    parser.add_argument(
+        "--trend-limit",
+        type=int,
+        default=30,
+        help="Maximum number of exception trend records.",
+    )
+    parser.add_argument(
+        "--history-limit",
+        type=int,
+        default=20,
+        help="Maximum number of historical runs.",
+    )
+    parser.add_argument(
+        "--recurring-minimum-runs",
+        type=int,
+        default=2,
+        help="Minimum distinct runs for a recurring exception.",
+    )
+
+    args = parser.parse_args()
+
+    if args.trend_limit < 1 or args.history_limit < 1:
+        parser.error("--trend-limit and --history-limit must be positive.")
+
+    if args.recurring_minimum_runs < 1:
+        parser.error("--recurring-minimum-runs must be positive.")
+
+    report = build_operational_review(
+        db_path=args.db_path,
+        trend_limit=args.trend_limit,
+        history_limit=args.history_limit,
+        recurring_minimum_runs=args.recurring_minimum_runs,
+    )
+
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    output_path.write_text(
+        json.dumps(report, indent=2, default=str),
+        encoding="utf-8",
+    )
+
+    # Also save the run comparison separately when available.
+    if report["run_comparison"]["available"]:
+        comparison_path = output_path.with_name(
+            "latest_run_comparison.json"
+        )
+        write_comparison_json(
+            report["run_comparison"]["result"],
+            comparison_path,
+        )
+
+    print("Operational review generated successfully.")
+    print(f"Database: {Path(args.db_path).resolve()}")
+    print(f"Report:   {output_path.resolve()}")
+    print(
+        "New remediation cases registered: "
+        f"{report['remediation']['new_cases_registered']}"
+    )
+    print(
+        "Recurring exceptions: "
+        f"{len(report['recurring_exceptions'])}"
+    )
+    print(
+        "Open remediation cases: "
+        f"{len(report['remediation']['open_cases'])}"
+    )
+    print(
+        "Run comparison available: "
+        f"{report['run_comparison']['available']}"
+    )
+
+
+if __name__ == "__main__":
+    main()

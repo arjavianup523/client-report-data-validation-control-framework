@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+data/control_audit.db
+outputs/
+
+test_outputs/
+test_data/

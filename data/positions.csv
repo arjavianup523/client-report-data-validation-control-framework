@@ -1,0 +1,6 @@
+position_id,account_id,security_id,quantity,price,as_of_date,currency,asset_class
+POS-1001,ACCT-01,SEC-001,100,25.50,2026-09-30,USD,Equity
+POS-1002,ACCT-01,SEC-002,50,101.25,2026-09-30,USD,Fixed Income
+POS-1003,ACCT-02,SEC-001,80,25.50,2026-09-30,USD,Equity
+POS-1004,ACCT-02,SEC-003,20,77.10,2026-09-30,USD,Equity
+POS-1005,ACCT-03,SEC-004,15,210.00,2026-09-30,USD,Fixed Income
