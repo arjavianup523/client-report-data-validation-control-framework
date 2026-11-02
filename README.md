@@ -14,7 +14,7 @@ A portfolio-reporting control workflow designed to demonstrate how investment op
 - Exports an Excel workbook with a control summary, exceptions, and positions (only when release is approved).
 - Includes automated tests for approval and blocking scenarios.
 
-> This is a portfolio project using synthetic data, not a production-certified financial control system. It does not represent Franklin Templeton's internal systems or procedures.
+> This is a portfolio project using synthetic data, not a production-certified financial control system.
 
 ## Requirements
 - Python 3.10+
@@ -36,11 +36,6 @@ If you already have a virtual environment, use its Python executable instead of 
 
 If critical controls fail, the Excel client report is not created. The run summary and audit database still record the blocked decision.
 
-## Demonstrate both release outcomes
-Run the scenario demo below. It uses temporary copies of the sample data and does not overwrite your source CSVs, existing outputs, or audit database. It verifies that clean data is approved and a deliberately mismatched control total is blocked.
-```powershell
-.\.venv\Scripts\python.exe -m scripts.run_demo_scenarios
-```
 
 ## Demonstrate both release outcomes
 Run the scenario demo below. It uses temporary copies of the sample data and does not overwrite your source CSVs, existing outputs, or audit database. It verifies that clean data is approved and a deliberately mismatched control total is blocked.
